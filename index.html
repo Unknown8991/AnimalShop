@@ -13,31 +13,128 @@
     <div class="navbar navbar-default">
       <h1>{{ sitename }}</h1>
       <div class="nav navbar-nav navbar-right cart">
-        <span class="glyphicon glyphicon-shopping-cart">
-          {{cartItemCount}}
-        </span>
+        <button type="button" class="btn btn-default btn-lg" @click="showCheckout">
+          <span class="glyphicon glyphicon-shopping-cart">
+            {{cartItemCount}}
+          </span> Kasa
+        </button>
       </div>
     </div>
   </header>
   <main>
-    <div class="row">
-      <div class="col-md-2 col-md-offset-1">
-        <figure>
-          <img v-bind:src="product.image">
-        </figure>
+    <div class="row product">
+      <div v-if="showProduct">
+
+        <div class="col-md-2 col-md-offset-1">
+          <figure>
+            <img v-bind:src="product.image">
+          </figure>
+        </div>
+        <div class="col-md-6 col-md-offset-2 description">
+          <h1 v-text="product.title"></h1>
+          <p v-html="product.description"></p>
+          <p class="price">
+            {{product.price | formatPrice}}
+          </p>
+          <button class="btn btn-primary btn-lg" @click="addToCart" v-if="canAddToCart">
+            Dodaj do koszyka
+          </button>
+          <button class="disabled" v-else>
+            Dodaj do koszyka
+          </button>
+          <span class="inventory-message" v-if="product.availableInventory - cartItemCount === 0"> Brak towaru
+          </span>
+          <span class="inventory-message" v-else-if="product.availableInventory - cartItemCount < 5"> Zostało tylko
+            {{ product.availableInventory - cartItemCount }} </span>
+          <span class="inventory-message" v-else> Kupuj teraz </span>
+          <div class="rating">
+            <span :class="{'rating-active' : checkRating(n)}" v-for="n in 5">☆</span>
+          </div>
+        </div>
       </div>
-      <div class="col-md-6 col-md-offset-2 description">
-        <h1 v-text="product.title"></h1>
-        <p v-html="product.description"></p>
-        <p class="price">
-          {{product.price | formatPrice}}
-        </p>
-        <button class="default" @click="addToCart" v-if="canAddToCart">
-          Dodaj do koszyka
-        </button>
-        <button class="disabled" v-else>
-          Dodaj do koszyka
-        </button>
+      <div v-else>
+        <div class="col-md-6">
+          <strong>Imie: </strong>
+          <input v-model.lazy.trim="order.firstName" class="form-control" type="text">
+        </div>
+        <div class="col-md-6">
+          <strong>Nazwisko: </strong>
+          <input v-model.trim="order.lastName" class="form-control" type="text">
+        </div>
+
+        <div class="form-group">
+          <div class="col-md-12">
+            <strong>Adres:</strong>
+          </div>
+          <div class="col-md-12">
+            <input v-model.trim="order.address" type="text" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-md-12">
+            <strong>Miejscowość:</strong>
+          </div>
+          <div class="col-md-12">
+            <input v-model.trim="order.city" type="text" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-md-2">
+            <strong>
+              Województwo:
+            </strong>
+            <select v-model="order.state" name="" id="" class="form-control">
+              <option disabled value="">Województwo</option>
+              <option v-for="(state, key) in states" :value="state" value="">
+                {{ key }}
+              </option>
+              <!-- <option :value="order.states.DL">DL</option>
+              <option :value="order.states.KP">KP</option>
+              <option :value="order.states.LB">LB</option>
+              <option :value="order.states.LU">LU</option> -->
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col--md-6 col-md-offset-4">
+            <strong>Kod pocztowy:</strong>
+            <input v-model.number="order.zip" type="number" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-md-6 boxes">
+            <input type="checkbox" id="gift" value="true" v-model="order.gift" :true-value="order.sendGift"
+              :false-value="order.dontSendGift">
+            <label for="gift">Wysłać jako prezent?</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-md-6 boxes">
+            <input type="radio" id="home" value="domowy" v-model="order.method" :value="order.home">
+            <label for="home">Domowy</label>
+            <input type="radio" id="buisness" value="firmowy" v-model="order.method" :value="order.businnes">
+            <label for="home">Firmowy</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-md-6">
+            <button type="submit" class="btn btn-primary submit" @click="submitForm">
+              Złóż zamówienie
+            </button>
+          </div>
+        </div>
+        <div class="col-md-12 verify">
+          <pre>
+              Imię: {{ order.firstName }}
+              Nazwisko: {{ order.lastName }}
+              Adres: {{ order.address }}
+              Miejscowość: {{ order.city }}
+              Kod pocztowy: {{ typeof(order.zip) }}
+              Województwo: {{ order.state }}
+              Metoda: {{ order.method }}
+              Prezent: {{ order.gift }}
+            </pre>
+        </div>
       </div>
     </div>
 
@@ -45,10 +142,11 @@
 
 </div>
 <script type="text/javascript">
-  var APP_LOG_LIFECYCLE_EVENTS = true;
+  // var APP_LOG_LIFECYCLE_EVENTS = true;
   var webstore = new Vue({
     el: '#app',
     data: {
+      showProduct: true,
       sitename: "Skład dla zwierzaków :: Vue.js",
       product: {
         id: 1001,
@@ -56,8 +154,30 @@
         description: "10-kilogramowe opakowanie pysznej karmy organicznej, której żaden kot się nie <em>oprze</em>!",
         price: 6700,
         image: "assets/images/product-fullsize.png",
-        availableInventory: 5,
+        availableInventory: 10,
+        rating: 3,
       },
+      order: {
+        firstName: '',
+        lastName: '',
+        address: '',
+        city: '',
+        zip: '',
+        state: '',
+        method: 'domowy',
+        gift: '',
+        sendGift: 'Wyślij jako prezent',
+        dontSendGift: 'Nie wysyłaj jako prezent',
+        home: 'adres domowy',
+        businnes: 'adres firmowy',
+      },
+      states: {
+        DL: 'Dolnośląskie',
+        KU: 'Kujawsko-pomorskie',
+        LB: 'Lubelskie',
+        LU: 'Lubuskie',
+      },
+
       cart: [],
     },
     filters: {
@@ -81,6 +201,15 @@
 
     },
     methods: {
+      checkRating(n) {
+        return this.product.rating - n >= 0;
+      },
+      submitForm() {
+        alert('Wysłano formularz!')
+      },
+      showCheckout() {
+        this.showProduct = this.showProduct ? false : true;
+      },
       addToCart() {
         this.cart.push(this.product.id);
         console.log('ok')
